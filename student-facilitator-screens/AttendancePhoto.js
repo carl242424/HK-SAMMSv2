@@ -102,6 +102,8 @@ export default function AttendancePhoto() {
         longitude: location ? location.longitude.toFixed(4) : "N/A",
         address: address || "N/A",
         studentId: "12345",
+        status: "Present", // ✅ added
+        remarks: "On time", // ✅ added
       };
 
       setRecords((prev) => [newRecord, ...prev]);
@@ -184,7 +186,7 @@ export default function AttendancePhoto() {
         </View>
       </Modal>
 
-      {/* ✅ Fixed Table Layout */}
+      {/* ✅ Enhanced Table Layout */}
       <View style={styles.tableWrapper}>
         <ScrollView horizontal showsHorizontalScrollIndicator={true}>
           <View>
@@ -196,14 +198,23 @@ export default function AttendancePhoto() {
               <View style={[styles.columnHeader, { width: 160 }]}>
                 <Text style={styles.headerText}>Time</Text>
               </View>
-              <View style={[styles.columnHeader, { width: 160 }]}>
-                <Text style={styles.headerText}>Location</Text>
+              <View style={[styles.columnHeader, { width: 120 }]}>
+                <Text style={styles.headerText}>Latitude</Text>
+              </View>
+              <View style={[styles.columnHeader, { width: 120 }]}>
+                <Text style={styles.headerText}>Longitude</Text>
               </View>
               <View style={[styles.columnHeader, { width: 240 }]}>
                 <Text style={styles.headerText}>Address</Text>
               </View>
               <View style={[styles.columnHeader, { width: 120 }]}>
                 <Text style={styles.headerText}>Student ID</Text>
+              </View>
+              <View style={[styles.columnHeader, { width: 120 }]}>
+                <Text style={styles.headerText}>Status</Text>
+              </View>
+              <View style={[styles.columnHeader, { width: 180 }]}>
+                <Text style={styles.headerText}>Remarks</Text>
               </View>
             </View>
 
@@ -214,6 +225,7 @@ export default function AttendancePhoto() {
               ) : (
                 filteredRecords.map((item) => (
                   <View style={styles.tableRow} key={item.id}>
+                    {/* Photo */}
                     <View style={[styles.columnCell, { width: 90, alignItems: "center" }]}>
                       <TouchableOpacity
                         onPress={() => {
@@ -229,16 +241,12 @@ export default function AttendancePhoto() {
                       <Text style={styles.cellText}>{item.time}</Text>
                     </View>
 
-                    <View style={[styles.columnCell, { width: 160 }]}>
-                      <TouchableOpacity
-                        onPress={() =>
-                          Linking.openURL(`https://www.google.com/maps?q=${item.latitude},${item.longitude}`)
-                        }
-                      >
-                        <Text style={[styles.cellText, { color: "#007BFF" }]}>
-                          {item.latitude}, {item.longitude}
-                        </Text>
-                      </TouchableOpacity>
+                    <View style={[styles.columnCell, { width: 120 }]}>
+                      <Text style={styles.cellText}>{item.latitude}</Text>
+                    </View>
+
+                    <View style={[styles.columnCell, { width: 120 }]}>
+                      <Text style={styles.cellText}>{item.longitude}</Text>
                     </View>
 
                     <View style={[styles.columnCell, { width: 240 }]}>
@@ -247,6 +255,14 @@ export default function AttendancePhoto() {
 
                     <View style={[styles.columnCell, { width: 120 }]}>
                       <Text style={styles.cellText}>{item.studentId}</Text>
+                    </View>
+
+                    <View style={[styles.columnCell, { width: 120 }]}>
+                      <Text style={styles.cellText}>{item.status}</Text>
+                    </View>
+
+                    <View style={[styles.columnCell, { width: 180 }]}>
+                      <Text style={styles.cellText}>{item.remarks}</Text>
                     </View>
                   </View>
                 ))

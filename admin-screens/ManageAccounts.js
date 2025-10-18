@@ -1,6 +1,12 @@
-import React, { useState , useEffect} from "react";
+import React, { useState } from "react";
 import {
-  View, Text, TextInput, TouchableOpacity, ScrollView, StyleSheet, Alert
+  View,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  ScrollView,
+  StyleSheet,
+  Alert,
 } from "react-native";
 import ScholarFormModal from "../components/ScholarFormModal";
 import ScholarViewModal from "../components/ScholarViewModal";
@@ -11,10 +17,18 @@ import * as Sharing from "expo-sharing";
 const PRIMARY_COLOR = "#00A4DF";
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const COURSES = [
-  "BS ACCOUNTANCY", "BS HOSPITALITY MANAGEMENT", "BS TOURISM MANAGEMENT",
-  "BSBA- MARKETING MANAGEMENT", "BSBA- BANKING & MICROFINANCE",
-  "BACHELOR OF ELEMENTARY EDUCATION", "BSED- ENGLISH", "BSED- FILIPINO",
-  "BS CRIMINOLOGY", "BS CIVIL ENGINEERING", "BS INFORMATION TECHNOLOGY", "BS NURSING"
+  "BS ACCOUNTANCY",
+  "BS HOSPITALITY MANAGEMENT",
+  "BS TOURISM MANAGEMENT",
+  "BSBA- MARKETING MANAGEMENT",
+  "BSBA- BANKING & MICROFINANCE",
+  "BACHELOR OF ELEMENTARY EDUCATION",
+  "BSED- ENGLISH",
+  "BSED- FILIPINO",
+  "BS CRIMINOLOGY",
+  "BS CIVIL ENGINEERING",
+  "BS INFORMATION TECHNOLOGY",
+  "BS NURSING",
 ];
 const DUTY_TYPES = ["Student Facilitator", "Attendance Checker"];
 
@@ -22,107 +36,81 @@ export default function ManageAccounts() {
   const [scholars, setScholars] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [form, setForm] = useState({
-    name: "", id: "", year: YEARS[0], course: COURSES[0], duty: DUTY_TYPES[0]
+    name: "",
+    id: "",
+    year: YEARS[0],
+    course: COURSES[0],
+    duty: DUTY_TYPES[0],
+    status: "Active",
+    remainingHours: 0,
   });
   const [modalVisible, setModalVisible] = useState(false);
   const [editIndex, setEditIndex] = useState(null);
   const [viewScholar, setViewScholar] = useState(null);
-   
-  useEffect(() => {
-    fetchScholars();
-  }, []);
 
-  const fetchScholars = async () => {
+  const updateForm = (field, value) =>
+    setForm((prevForm) => ({ ...prevForm, [field]: value }));
+
+  const saveScholar = (data, isEditing) => {
     try {
-      const response = await fetch("http://192.168.86.139:8000/api/scholars");
-      const data = await response.json();
-      setScholars(data);
+      if (isEditing && editIndex !== null) {
+        const updated = [...scholars];
+        updated[editIndex] = data;
+        setScholars(updated);
+      } else {
+        const newScholar = { ...data, status: "Active", remainingHours: 0 };
+        setScholars((prev) => [...prev, newScholar]);
+      }
+      resetForm();
     } catch (err) {
-      Alert.alert("Error", "Unable to fetch scholars");
+      Alert.alert("Error", "Failed to save scholar");
     }
   };
 
-  const updateForm = (field, value) =>
-    setForm(prevForm => ({ ...prevForm, [field]: value }));
-const saveScholar = async (data, isEditing) => {
-  try {
-    if (isEditing && editIndex !== null) {
-      // Update existing scholar
-      await fetch(`http://192.168.86.139:8000/api/scholars/${scholars[editIndex]._id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-    } else {
-      // Create new scholar (backend auto-creates user account)
-      await fetch("http://192.168.86.139:8000/api/scholars", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(data),
-      });
-      
-    }
-
-    resetForm();
-    fetchScholars(); // Refresh list
-  } catch (err) {
-    Alert.alert("Error", "Failed to save scholar");
-  }
-};
-
-
   const resetForm = () => {
-    setForm({ name: "", id: "", year: YEARS[0], course: COURSES[0], duty: DUTY_TYPES[0] });
+    setForm({
+      name: "",
+      id: "",
+      year: YEARS[0],
+      course: COURSES[0],
+      duty: DUTY_TYPES[0],
+      status: "Active",
+      remainingHours: 0,
+    });
     setEditIndex(null);
     setModalVisible(false);
   };
 
-// ✅ Toggle status for scholar and refresh
-const toggleScholarStatus = async (scholar) => {
-  const scholarId = scholar._id; 
-  if (!scholarId) {
-    console.error("❌ No _id found for scholar:", scholar);
-    return Alert.alert("Error", "Invalid scholar ID");
-  }
-
-  const newStatus =
-    scholar.status.toLowerCase() === "Active" ? "Inactive" : "Active";
-
-  try {
-    const response = await fetch(
-      `http://192.168.86.139:8000/api/scholars/${scholarId}/status`,
-      {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-      }
+  const toggleScholarStatus = (scholar) => {
+    const updated = scholars.map((s) =>
+      s.id === scholar.id
+        ? {
+            ...s,
+            status: s.status === "Active" ? "Inactive" : "Active",
+          }
+        : s
     );
+    setScholars(updated);
+    Alert.alert(
+      "Status Updated",
+      `Scholar ${scholar.name}'s status changed successfully.`
+    );
+  };
 
-    if (!response.ok) {
-      const errorData = await response.json();
-      throw new Error(errorData.message || "Failed to update status");
-    }
-
-    const data = await response.json();
-    console.log("✅ Scholar status updated:", data);
-
-    Alert.alert("Success", `Scholar status changed to ${newStatus}`);
-    await fetchScholars(); // refresh the list after toggle
-  } catch (error) {
-    console.error("❌ Error updating scholar status:", error);
-    Alert.alert("Error", "Failed to update scholar status");
-  }
-};
-
-  const filteredScholars = scholars.filter(s =>
-    s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    s.id.toLowerCase().includes(searchQuery.toLowerCase())
+  const filteredScholars = scholars.filter(
+    (s) =>
+      s.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      s.id.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   // 🧾 Export to PDF
   const exportToPDF = async (filteredScholars) => {
-    const escapeHtml = (text) => String(text || '')
-      .replace(/&/g, '&amp;').replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    const escapeHtml = (text) =>
+      String(text || "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;");
 
     const htmlContent = `
       <!DOCTYPE html>
@@ -147,11 +135,23 @@ const toggleScholarStatus = async (scholar) => {
               <tr><th>Name</th><th>ID</th><th>Year</th><th>Course</th><th>Duty</th><th>Hours Left</th><th>Status</th></tr>
             </thead>
             <tbody>
-              ${filteredScholars.length > 0
-                ? filteredScholars.map(s =>
-                    `<tr><td>${escapeHtml(s.name)}</td><td>${escapeHtml(s.id)}</td><td>${escapeHtml(s.year)}</td><td>${escapeHtml(s.course)}</td><td>${escapeHtml(s.duty)}</td><td>${s.remainingHours ?? 0}</td><td>${s.status}</td></tr>`
-                  ).join("")
-                : `<tr><td colspan="7" style="text-align:center;">No scholars found</td></tr>`
+              ${
+                filteredScholars.length > 0
+                  ? filteredScholars
+                      .map(
+                        (s) =>
+                          `<tr>
+                            <td>${escapeHtml(s.name)}</td>
+                            <td>${escapeHtml(s.id)}</td>
+                            <td>${escapeHtml(s.year)}</td>
+                            <td>${escapeHtml(s.course)}</td>
+                            <td>${escapeHtml(s.duty)}</td>
+                            <td>${s.remainingHours ?? 0}</td>
+                            <td>${s.status}</td>
+                          </tr>`
+                      )
+                      .join("")
+                  : `<tr><td colspan="7" style="text-align:center;">No scholars found</td></tr>`
               }
             </tbody>
           </table>
@@ -162,7 +162,7 @@ const toggleScholarStatus = async (scholar) => {
     try {
       const { uri } = await Print.printToFileAsync({ html: htmlContent });
       if (await Sharing.isAvailableAsync()) {
-        await Sharing.shareAsync(uri, { mimeType: 'application/pdf' });
+        await Sharing.shareAsync(uri, { mimeType: "application/pdf" });
       } else {
         Alert.alert("PDF Generated", `Saved at: ${uri}`);
       }
@@ -211,7 +211,7 @@ const toggleScholarStatus = async (scholar) => {
             setForm(filteredScholars[index]);
             setModalVisible(true);
           }}
-          onToggleStatus={toggleScholarStatus} // 👈 new handler
+          onToggleStatus={toggleScholarStatus}
         />
       </ScrollView>
 
@@ -228,7 +228,7 @@ const toggleScholarStatus = async (scholar) => {
       <ScholarViewModal
         scholar={viewScholar}
         onClose={() => setViewScholar(null)}
-        onDeactivate={(index) => toggleScholarStatus(index)}
+        onDeactivate={(scholar) => toggleScholarStatus(scholar)}
       />
     </View>
   );
@@ -236,11 +236,28 @@ const toggleScholarStatus = async (scholar) => {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 16, backgroundColor: "#fff" },
-  header: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginBottom: 16 },
+  header: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginBottom: 16,
+  },
   title: { fontSize: 20, fontWeight: "bold", marginTop: 30 },
-  createBtn: { backgroundColor: PRIMARY_COLOR, paddingVertical: 10, paddingHorizontal: 15, borderRadius: 6, marginTop: 30 },
+  createBtn: {
+    backgroundColor: PRIMARY_COLOR,
+    paddingVertical: 10,
+    paddingHorizontal: 15,
+    borderRadius: 6,
+    marginTop: 30,
+  },
   btnText: { color: "white", fontWeight: "600" },
-  search: { borderWidth: 1, borderColor: "#ccc", borderRadius: 6, padding: 8, marginBottom: 12 },
+  search: {
+    borderWidth: 1,
+    borderColor: "#ccc",
+    borderRadius: 6,
+    padding: 8,
+    marginBottom: 12,
+  },
   sectionTitle: { fontSize: 18, fontWeight: "600", marginVertical: 8 },
   sectionHeader: {
     flexDirection: "row",

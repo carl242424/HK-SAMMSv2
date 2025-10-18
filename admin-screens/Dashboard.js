@@ -860,29 +860,28 @@ splitGraphsContainer: {
   
   // --- MODAL STYLES ---
   centeredView: {
-    flex: 1,
-    justifyContent: 'flex-start',
-    alignItems: 'center',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingTop: Platform.OS === 'web' ? 50 : 100, // Position lower on web
-  },
-  modalView: {
-    backgroundColor: 'white',
-    borderRadius: 12,
-    padding: 20,
-    alignItems: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: {
-      width: 0,
-      height: 2,
-    },
-    shadowOpacity: 0.25,
-    shadowRadius: 4,
-    elevation: 5,
-    width: Math.min(width * 0.9, 400), // Max width for larger screens
-    position: 'absolute',
-    top: 50, // Position near the button area
-  },
+  flex: 1,
+  justifyContent: 'flex-start',
+  alignItems: 'center',
+  backgroundColor: 'rgba(0, 0, 0, 0.5)',
+},
+modalView: {
+  backgroundColor: 'white',
+  borderRadius: 12,
+  padding: 20,
+  alignItems: 'flex-start',
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 4,
+  elevation: 5,
+  width: Math.min(width * 0.9, 400),
+  position: 'absolute',
+
+  // ✅ Automatically move modal below the header on mobile
+  top: width < 480 ? 160 : 80, // 160px on mobile, 80px on larger screens
+},
+
   modalHeader: {
     fontSize: 16,
     fontWeight: 'bold',

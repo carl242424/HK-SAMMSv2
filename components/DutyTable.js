@@ -13,7 +13,7 @@ const DutyTable = ({ duties = [], onEdit, onView, onToggleStatus }) => {
 
   const columnWidth = 140;
   const actionWidth = 200;
-  const totalColumns = 6; // Name, Duty, Day, Time, Room, Status
+  const totalColumns = 7; // Name, Duty, Day, Time, Room, Status
   const tableMinWidth = totalColumns * columnWidth + actionWidth;
 
   return (
@@ -33,6 +33,7 @@ const DutyTable = ({ duties = [], onEdit, onView, onToggleStatus }) => {
           <Text style={[styles.cell, styles.header]}>Day</Text>
           <Text style={[styles.cell, styles.header]}>Time</Text>
           <Text style={[styles.cell, styles.header]}>Room</Text>
+          <Text style={[styles.cell, styles.header]}>Hours</Text>
           <Text style={[styles.cell, styles.header]}>Status</Text>
           <Text style={[styles.actionsCellHeader, styles.header]}>Actions</Text>
         </View>
@@ -47,6 +48,12 @@ const DutyTable = ({ duties = [], onEdit, onView, onToggleStatus }) => {
               <Text style={styles.cell}>
                 {duty.room || (duty.dutyType === "Attendance Checker" ? "—" : "N/A")}
               </Text>
+              <Text style={styles.cell}>
+  {(duty.dutyType === "Student Facilitator" || duty.dutyType === "Attendance Checker") 
+    ? "70 hrs (Total)" 
+    : "N/A"}
+</Text>
+
               <Text
                 style={[
                   styles.cell,
@@ -58,13 +65,7 @@ const DutyTable = ({ duties = [], onEdit, onView, onToggleStatus }) => {
 
               {/* Actions */}
               <View style={styles.actionsCell}>
-                <TouchableOpacity
-                  style={styles.viewBtn}
-                  onPress={() => onView && onView(duty)}
-                >
-                  <Text style={styles.btnText}>View</Text>
-                </TouchableOpacity>
-
+              
                 <TouchableOpacity
                   style={styles.editBtn}
                   onPress={() => onEdit && onEdit(index)}
@@ -72,20 +73,7 @@ const DutyTable = ({ duties = [], onEdit, onView, onToggleStatus }) => {
                   <Text style={styles.btnText}>Edit</Text>
                 </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={[
-                    styles.statusBtn,
-                    {
-                      backgroundColor:
-                        duty.status === "Active" ? "#d9534f" : "green",
-                    },
-                  ]}
-                  onPress={() => onToggleStatus && onToggleStatus(index)}
-                >
-                  <Text style={styles.btnText}>
-                    {duty.status === "Active" ? "Deactivate" : "Re-Activate"}
-                  </Text>
-                </TouchableOpacity>
+              
               </View>
             </View>
           ))

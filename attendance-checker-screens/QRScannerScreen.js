@@ -10,7 +10,6 @@ import {
 import { CameraView, useCameraPermissions } from "expo-camera";
 import QRCheckIn from "./QRCheckIn"; // Make sure this path is correct
 
-const API_URL = "http://192.168.86.139:8000/api/checkerAttendance";
 const PRIMARY_COLOR = "#00A4DF";
 
 export default function QRScannerScreen() {
@@ -22,40 +21,18 @@ export default function QRScannerScreen() {
     if (!permission) requestPermission();
   }, [permission]);
 
-  const handleBarcodeScanned = async ({ data }) => {
-    console.log("Raw QR data:", data); // Debug raw QR data
+  const handleBarcodeScanned = ({ data }) => {
+    console.log("Raw QR data:", data); // Debug log
     try {
       const parsed = JSON.parse(data); // Expects structured JSON from QR
-      setScannedData(parsed);
       setIsSaving(true);
 
-      // Prepare check record with checker details
-      const checkRecord = {
-        studentId: parsed.studentId || `NO-ID-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
-        studentName: parsed.studentName || "N/A",
-        checkerId: "FAC001", // Example checker ID (replace with dynamic value if needed)
-        checkerName: "John Facilitator", // Example checker name (replace with dynamic value if needed)
-        checkInTime: new Date(),
-        location: parsed.location || "Room 101",
-        status: "Pending",
-      };
-
-      // Save attendance to backend
-      const response = await fetch(API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(checkRecord),
-      });
-
-      const result = await response.json();
-
-      if (response.ok) {
-        Alert.alert("✅ Attendance Recorded", `${checkRecord.studentName} marked for check.`);
-      } else {
-        Alert.alert("❌ Failed", result.message || "Something went wrong");
-      }
-
-      setIsSaving(false);
+      // Simulate processing time
+      setTimeout(() => {
+        setScannedData(parsed);
+        setIsSaving(false);
+        Alert.alert("✅ QR Scanned", `${parsed.studentName || "Unknown"} detected.`);
+      }, 1000);
     } catch (error) {
       console.log("QR parse error:", error);
       Alert.alert("⚠️ Invalid QR", "This QR code is not valid or unreadable.");
@@ -76,20 +53,22 @@ export default function QRScannerScreen() {
 
   return (
     <View style={styles.container}>
-      <CameraView
-        style={styles.camera}
-        facing="back"
-        onBarcodeScanned={scannedData ? undefined : handleBarcodeScanned}
-      >
-        <View style={styles.overlay}>
-          <Text style={styles.scanText}>Scan Scholar Duty QR</Text>
-        </View>
-      </CameraView>
+      {!scannedData && (
+        <CameraView
+          style={styles.camera}
+          facing="back"
+          onBarcodeScanned={handleBarcodeScanned}
+        >
+          <View style={styles.overlay}>
+            <Text style={styles.scanText}>Scan Scholar Duty QR</Text>
+          </View>
+        </CameraView>
+      )}
 
       {isSaving && (
         <View style={styles.overlayCenter}>
           <ActivityIndicator size="large" color={PRIMARY_COLOR} />
-          <Text style={{ color: PRIMARY_COLOR, marginTop: 10 }}>Saving...</Text>
+          <Text style={{ color: PRIMARY_COLOR, marginTop: 10 }}>Processing...</Text>
         </View>
       )}
 

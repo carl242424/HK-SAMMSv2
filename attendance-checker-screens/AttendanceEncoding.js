@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
@@ -14,7 +14,6 @@ import QRCode from "react-native-qrcode-svg";
 import moment from "moment";
 import SaveAttendanceRecordTable from "./SaveAttendanceRecordTable";
 import { Ionicons } from "@expo/vector-icons";
-import axios from "axios";
 
 const YEARS = ["1st Year", "2nd Year", "3rd Year", "4th Year"];
 const COURSES = [
@@ -39,8 +38,6 @@ const ROOMS = [
   "408", "409",
 ];
 
-const API_URL = "http://192.168.86.139:8000/api/attendance"; // Update to match your backend port
-
 const AttendanceEncoding = () => {
   const [studentName, setStudentName] = useState("");
   const [studentId, setStudentId] = useState("");
@@ -56,121 +53,55 @@ const AttendanceEncoding = () => {
   const [facilitatorStatus, setFacilitatorStatus] = useState(null);
   const [searchQuery, setSearchQuery] = useState("");
 
-  // Fetch records on mount
-  useEffect(() => {
-    fetchRecords();
-  }, []);
+  // Save locally (no backend)
+  const handleSave = () => {
+    const idPattern = /^\d{2}-\d{4}-\d{6}$/;
+    const trimmedName = studentName?.trim();
 
-  // Fetch records from backend
-  const fetchRecords = async (query = "") => {
-    try {
-      const url = query ? `${API_URL}/search?query=${encodeURIComponent(query)}` : API_URL;
-      const response = await axios.get(url);
-      const formattedRecords = response.data.map(record => ({
-        ...record,
-        id: record._id,
-      }));
-      setRecords(formattedRecords);
-    } catch (error) {
-      Alert.alert("Error", "Failed to fetch records. Please try again.");
-      console.error(error);
+    if (!trimmedName || !studentId || !yearLevel || !course || !dutyType || !room) {
+      Alert.alert("Error", "Please fill out all fields.");
+      return;
     }
+
+    if (!idPattern.test(studentId)) {
+      Alert.alert("Invalid Format", "Student ID must follow 00-0000-000000 format (2-4-6 digits).");
+      return;
+    }
+
+    const newRecord = {
+      id: Date.now().toString(),
+      studentName: trimmedName,
+      studentId,
+      yearLevel,
+      course,
+      dutyType,
+      room,
+      classStatus,
+      facilitatorStatus,
+      encodedTime: moment().format("MM/DD/YYYY hh:mm A"),
+    };
+
+    setRecords((prev) => [...prev, newRecord]);
+    setLastRecord(newRecord);
+    setQrModalVisible(true);
+    setFormModalVisible(false);
+
+    // Reset form
+    setStudentName("");
+    setStudentId("");
+    setYearLevel(null);
+    setCourse(null);
+    setDutyType(null);
+    setRoom(null);
+    setClassStatus(null);
+    setFacilitatorStatus(null);
   };
 
-  // Auto-fill form when studentId changes
-  useEffect(() => {
-    if (studentId && studentId.match(/^\d{2}-\d{4}-\d{6}$/)) {
-      fetchStudentData(studentId);
-    } else {
-      // Clear fields if studentId is invalid
-      setStudentName("");
-      setYearLevel(null);
-      setCourse(null);
-      setDutyType(null);
-    }
-  }, [studentId]);
-
-  // Fetch student data for auto-fill
-  const fetchStudentData = async (id) => {
-    try {
-      const response = await axios.get(`${API_URL}/student/${id}`);
-      const record = response.data;
-      setStudentName(record.studentName || "");
-      setYearLevel(record.yearLevel || null);
-      setCourse(record.course || null);
-      setDutyType(record.dutyType || null);
-    } catch (error) {
-      if (error.response && error.response.status === 404) {
-        // No record found, keep fields empty
-        setStudentName("");
-        setYearLevel(null);
-        setCourse(null);
-        setDutyType(null);
-      } else {
-        Alert.alert("Error", "Failed to fetch student data. Please try again.");
-        console.error(error);
-      }
-    }
-  };
-
-  // Handle save with duplicate and 40-minute checks
-  const handleSave = async () => {
-    try {
-      const idPattern = /^\d{2}-\d{4}-\d{6}$/;
-      const trimmedName = studentName?.trim();
-      if (!trimmedName || !studentId || !yearLevel || !course || !dutyType || !room) {
-        Alert.alert("Error", "Please fill out all fields.");
-        return;
-      }
-
-      if (!idPattern.test(studentId)) {
-        Alert.alert("Invalid Format", "Student ID must follow 00-0000-000000 format (2-4-6 digits).");
-        return;
-      }
-
-      const newRecord = {
-        studentName: trimmedName,
-        studentId,
-        yearLevel,
-        course,
-        dutyType,
-        room,
-        classStatus,
-        facilitatorStatus,
-        encodedTime: moment().format("MM/DD/YYYY hh:mm A"),
-      };
-
-      // Send record to backend
-      const response = await axios.post(API_URL, newRecord);
-      const savedRecord = { ...response.data, id: response.data._id };
-      setRecords((prev) => [...prev, savedRecord]);
-      setLastRecord(savedRecord);
-      setQrModalVisible(true);
-      setFormModalVisible(false);
-
-      // Reset form
-      setStudentName("");
-      setStudentId("");
-      setYearLevel(null);
-      setCourse(null);
-      setDutyType(null);
-      setRoom(null);
-      setClassStatus(null);
-      setFacilitatorStatus(null);
-    } catch (error) {
-      if (error.response && error.response.status === 400 && error.response.data.error) {
-        Alert.alert("Error", error.response.data.error); // Show backend error (e.g., duplicate check-in)
-      } else {
-        Alert.alert("Error", "Failed to save record. Please try again.");
-      }
-      console.error(error);
-    }
-  };
-
-  // Update search
-  useEffect(() => {
-    fetchRecords(searchQuery);
-  }, [searchQuery]);
+  const filteredRecords = records.filter(
+    (r) =>
+      r.studentName.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      r.studentId.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   const formatStudentId = (text) => {
     const digits = text.replace(/[^\d]/g, "");
@@ -208,16 +139,12 @@ const AttendanceEncoding = () => {
           onChangeText={setSearchQuery}
         />
       </View>
+
       {/* Table displayed below */}
-      <SaveAttendanceRecordTable records={records} />
+      <SaveAttendanceRecordTable records={filteredRecords} />
 
       {/* Attendance Form Modal */}
-      <Modal
-        visible={formModalVisible}
-        animationType="slide"
-        transparent
-        onRequestClose={() => setFormModalVisible(false)}
-      >
+      <Modal visible={formModalVisible} animationType="slide" transparent>
         <View style={styles.modalOverlay}>
           <View style={styles.modalFormContent}>
             <Text style={styles.formTitle}>Attendance Form</Text>
@@ -345,12 +272,7 @@ const AttendanceEncoding = () => {
       </Modal>
 
       {/* QR Modal */}
-      <Modal
-        visible={qrModalVisible}
-        transparent
-        animationType="slide"
-        onRequestClose={() => setQrModalVisible(false)}
-      >
+      <Modal visible={qrModalVisible} transparent animationType="slide">
         <View style={styles.modalOverlay}>
           <View style={styles.modalQRContent}>
             <Text style={styles.modalTitle}>Attendance QR Code</Text>
@@ -373,144 +295,32 @@ const AttendanceEncoding = () => {
 };
 
 const styles = StyleSheet.create({
-  container: {
-    backgroundColor: "#f2f4f7",
-    flex: 1,
-    padding: 15,
-    width: "100%",
-  },
-  headerRow: {
-    flexDirection: "row",
-    justifyContent: "space-between",
-    alignItems: "center",
-    marginTop: 30,
-    marginBottom: 15,
-  },
-  title: {
-    fontSize: 22,
-    fontWeight: "700",
-    color: "#222",
-  },
-  openFormButton: {
-    backgroundColor: "#4CAF50",
-    paddingVertical: 10,
-    paddingHorizontal: 15,
-    borderRadius: 8,
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  openFormButtonText: {
-    color: "#fff",
-    fontWeight: "600",
-    fontSize: 15,
-  },
-  modalOverlay: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-  modalFormContent: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    width: "90%",
-    maxHeight: "90%",
-  },
-  modalQRContent: {
-    backgroundColor: "#fff",
-    borderRadius: 15,
-    padding: 20,
-    alignItems: "center",
-    width: "80%",
-  },
-  formTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-    marginBottom: 10,
-  },
+  container: { backgroundColor: "#f2f4f7", flex: 1, padding: 15, width: "100%" },
+  headerRow: { flexDirection: "row", justifyContent: "space-between", alignItems: "center", marginTop: 30, marginBottom: 15 },
+  title: { fontSize: 22, fontWeight: "700", color: "#222" },
+  openFormButton: { backgroundColor: "#4CAF50", paddingVertical: 10, paddingHorizontal: 15, borderRadius: 8, flexDirection: "row", alignItems: "center" },
+  openFormButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
+  searchContainer: { flexDirection: "row", alignItems: "center", backgroundColor: "#fff", borderRadius: 8, paddingHorizontal: 10, paddingVertical: 6, borderWidth: 1, borderColor: "#ddd", marginBottom: 15 },
+  searchInput: { flex: 1, fontSize: 14, color: "#333" },
+  modalOverlay: { flex: 1, backgroundColor: "rgba(0,0,0,0.5)", justifyContent: "center", alignItems: "center" },
+  modalFormContent: { backgroundColor: "#fff", borderRadius: 15, padding: 20, width: "90%", maxHeight: "90%" },
+  modalQRContent: { backgroundColor: "#fff", borderRadius: 15, padding: 20, alignItems: "center", width: "80%" },
+  formTitle: { fontSize: 18, fontWeight: "600", textAlign: "center", marginBottom: 10 },
   inputContainer: { marginBottom: 10 },
-  label: {
-    fontSize: 14,
-    fontWeight: "600",
-    color: "#333",
-    marginBottom: 5,
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    padding: 10,
-    fontSize: 14,
-  },
-  dropdown: {
-    borderWidth: 1,
-    borderColor: "#ccc",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    height: 45,
-    marginBottom: 10,
-  },
-  button: {
-    backgroundColor: "#4CAF50",
-    padding: 12,
-    borderRadius: 8,
-    alignItems: "center",
-    marginTop: 10,
-  },
+  label: { fontSize: 14, fontWeight: "600", color: "#333", marginBottom: 5 },
+  input: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, padding: 10, fontSize: 14 },
+  dropdown: { borderWidth: 1, borderColor: "#ccc", borderRadius: 8, paddingHorizontal: 10, height: 45, marginBottom: 10 },
+  button: { backgroundColor: "#4CAF50", padding: 12, borderRadius: 8, alignItems: "center", marginTop: 10 },
   buttonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  closeModalButton: {
-    marginTop: 15,
-    backgroundColor: "#999",
-    padding: 10,
-    borderRadius: 8,
-    alignItems: "center",
-  },
+  closeModalButton: { marginTop: 15, backgroundColor: "#999", padding: 10, borderRadius: 8, alignItems: "center" },
   closeButtonText: { color: "#fff", fontWeight: "600", fontSize: 15 },
-  modalTitle: {
-    fontSize: 18,
-    fontWeight: "600",
-    marginBottom: 15,
-    color: "#333",
-  },
-  closeButton: {
-    marginTop: 20,
-    backgroundColor: "#4CAF50",
-    paddingVertical: 10,
-    paddingHorizontal: 25,
-    borderRadius: 8,
-  },
-  radioGroup: {
-    flexDirection: "row",
-    flexWrap: "wrap",
-    gap: 15,
-    marginTop: 5,
-  },
+  modalTitle: { fontSize: 18, fontWeight: "600", marginBottom: 15, color: "#333" },
+  closeButton: { marginTop: 20, backgroundColor: "#4CAF50", paddingVertical: 10, paddingHorizontal: 25, borderRadius: 8 },
+  radioGroup: { flexDirection: "row", flexWrap: "wrap", gap: 15, marginTop: 5 },
   radioOption: { flexDirection: "row", alignItems: "center" },
-  radioCircle: {
-    height: 18,
-    width: 18,
-    borderRadius: 9,
-    borderWidth: 2,
-    borderColor: "#555",
-    marginRight: 6,
-  },
+  radioCircle: { height: 18, width: 18, borderRadius: 9, borderWidth: 2, borderColor: "#555", marginRight: 6 },
   radioSelected: { backgroundColor: "#4CAF50", borderColor: "#4CAF50" },
   radioText: { color: "#333", fontSize: 15 },
-  searchContainer: {
-    flexDirection: "row",
-    alignItems: "center",
-    backgroundColor: "#fff",
-    borderRadius: 8,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderWidth: 1,
-    borderColor: "#ddd",
-    marginBottom: 15,
-  },
-  searchInput: { flex: 1, fontSize: 14, color: "#333" },
 });
 
 export default AttendanceEncoding;

@@ -1,17 +1,14 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   View,
   Text,
   TextInput,
   TouchableOpacity,
-  ScrollView,
   StyleSheet,
-  Alert,
 } from "react-native";
 import ScholarDutyFormModal from "../components/ScholarDutyFormModal";
 import ScholarDutyViewModal from "../components/ScholarDutyViewModal";
 import DutyTable from "../components/DutyTable";
-import axios from "axios";
 
 const PRIMARY_COLOR = "#00A4DF";
 
@@ -35,158 +32,99 @@ export default function DutyManagement() {
     dutyType: "",
     schedules: [{ day: "", startTime: "", endTime: "", room: "" }],
   });
-  const [isLoading, setIsLoading] = useState(false);
 
-  useEffect(() => {
-    const fetchDuties = async () => {
-      try {
-        const response = await axios.get("http://192.168.86.139:8000/api/duties");
-        console.log("Fetched duties:", response.data);
-        setDuties(response.data);
-      } catch (error) {
-        console.error("Error fetching duties:", error.response?.data || error.message);
-        Alert.alert("Error", "Failed to load duties. Please try again.");
-      }
-    };
-    fetchDuties();
-  }, []);
-
-  const validateScholarAccount = async (scholarId) => {
-    console.log("Validating scholar ID:", scholarId);
-    try {
-      const response = await axios.get(`http://192.168.86.139:8000/api/scholars/${scholarId}`);
-      console.log("Validation response:", JSON.stringify(response.data, null, 2));
-      return response.data.exists === true;
-    } catch (error) {
-      console.error("Validation error:", error.response?.status, error.message, error.response?.data);
-      return false;
-    }
-  };
-
+  // Local time overlap logic (kept since it’s frontend only)
   const doTimeRangesOverlap = (day1, start1, end1, day2, start2, end2) => {
-    console.log(`Checking overlap: ${day1} ${start1}-${end1} vs ${day2} ${start2}-${end2}`);
-    if (day1 !== day2) {
-      console.log("No overlap: different days");
-      return false;
-    }
+    if (day1 !== day2) return false;
     const startIndex1 = TIMES.indexOf(start1);
     const endIndex1 = TIMES.indexOf(end1);
     const startIndex2 = TIMES.indexOf(start2);
     const endIndex2 = TIMES.indexOf(end2);
-    if (startIndex1 === -1 || endIndex1 === -1 || startIndex2 === -1 || endIndex2 === -1) {
-      console.log("No overlap: invalid time indices", { startIndex1, endIndex1, startIndex2, endIndex2 });
+    if (startIndex1 === -1 || endIndex1 === -1 || startIndex2 === -1 || endIndex2 === -1)
       return false;
-    }
-    const hasOverlap = startIndex1 < endIndex2 && startIndex2 < endIndex1;
-    console.log(`Overlap result: ${hasOverlap}`);
-    return hasOverlap;
+    return startIndex1 < endIndex2 && startIndex2 < endIndex1;
   };
 
   const checkScheduleOverlap = (newSchedules, existingDuties, scholarId, isEditing) => {
-    console.log("Checking database overlaps for schedules:", newSchedules);
-    return newSchedules.some((newSched, index) => {
-      console.log(`Checking new schedule ${index + 1}:`, newSched);
-      if (!newSched.day || !newSched.startTime || !newSched.endTime) {
-        console.log("Skipping incomplete schedule");
+  return newSchedules.some((newSched) => {
+    if (!newSched.day || !newSched.startTime || !newSched.endTime) return false;
+    return existingDuties.some((duty) => {
+      // skip itself if editing
+      if (
+        isEditing &&
+        duty.id === scholarId &&
+        duty.day === newSched.day &&
+        duty.time === `${newSched.startTime} - ${newSched.endTime}` &&
+        duty.room === newSched.room
+      )
         return false;
-      }
-      return existingDuties.some((duty) => {
-        if (isEditing && duty.id === scholarId) {
-          console.log(`Skipping duty for same scholar (editing): ${duty.id}`);
-          return false;
-        }
-        const [startTime, endTime] = duty.time.split(" - ");
-        const overlap = doTimeRangesOverlap(
-          newSched.day,
-          newSched.startTime,
-          newSched.endTime,
-          duty.day,
-          startTime,
-          endTime
-        );
-        if (overlap) {
-          console.log(`Overlap detected with duty: ${duty.day} ${duty.time} (ID: ${duty.id})`);
-        }
-        return overlap;
-      });
-    });
-  };
 
-  const saveDuty = async (duty, isEditing) => {
-    console.log("Attempting to save duty:", duty);
-    if (!duty.id || !duty.dutyType || !duty.schedules?.length) {
-      throw new Error("Scholar ID, duty type, and at least one schedule are required.");
-    }
-
-    const hasAccount = await validateScholarAccount(duty.id);
-    console.log("Account validation result:", hasAccount);
-    if (!hasAccount) {
-      console.log("Throwing error for unknown account");
-      throw new Error("Unknown account. Please register first.");
-    }
-
-    // Check for overlaps with existing duties
-    if (checkScheduleOverlap(duty.schedules, duties, duty.id, isEditing)) {
-      console.log("Throwing overlap error");
-      throw new Error("The selected schedule overlaps with another. Please choose a different time slot.");
-    }
-
-    const dutiesToSave = duty.schedules.map((s) => ({
-      name: duty.name,
-      id: duty.id,
-      year: duty.year,
-      course: duty.course,
-      dutyType: duty.dutyType,
-      day: s.day,
-      time: `${s.startTime} - ${s.endTime}`,
-      room: duty.dutyType === "Attendance Checker" ? "N/A" : s.room || "",
-      status: "Active",
-    }));
-
-    console.log("Data to save:", dutiesToSave);
-
-    try {
-      if (isEditing && editIndex !== null) {
-        // Delete existing duties for the scholar
-        const existingDuties = duties.filter(d => d.id === duty.id);
-        await Promise.all(
-          existingDuties.map(d =>
-            d._id ? axios.delete(`http://192.168.86.139:8000/api/duties/${d._id}`) : Promise.resolve()
-          )
-        );
-        console.log("Deleted existing duties for scholar ID:", duty.id);
-      }
-
-      // Create new duties
-      const responses = await Promise.all(
-        dutiesToSave.map((dutyItem) =>
-          axios.post("http://192.168.86.139:8000/api/duties", dutyItem)
-        )
+      const [startTime, endTime] = duty.time.split(" - ");
+      return doTimeRangesOverlap(
+        newSched.day,
+        newSched.startTime,
+        newSched.endTime,
+        duty.day,
+        startTime,
+        endTime
       );
-      const savedDuties = responses.map((r) => r.data);
-      console.log("Saved duties:", savedDuties);
+    });
+  });
+};
 
-      if (isEditing && editIndex !== null) {
-        // Replace all duties for the scholar in the UI
-        const updatedDuties = duties.filter(d => d.id !== duty.id);
-        setDuties([...updatedDuties, ...savedDuties]);
-      } else {
-        setDuties((prevDuties) => [...prevDuties, ...savedDuties]);
-      }
 
-      return { success: true };
-    } catch (error) {
-      console.error("Error saving duty:", error.response?.status, error.message, error.response?.data);
-      throw error;
+ // Save duty locally (no backend)
+const saveDuty = async (duty, isEditing) => {
+  if (!duty.id || !duty.dutyType || !duty.schedules?.length) {
+    throw new Error("Scholar ID, duty type, and at least one schedule are required.");
+  }
+
+  // Skip overlap check for allowed duty types
+  if (
+    duty.dutyType !== "Student Facilitator" &&
+    duty.dutyType !== "Attendance Checker"
+  ) {
+    if (checkScheduleOverlap(duty.schedules, duties, duty.id, isEditing)) {
+      throw new Error(
+        "The selected schedule overlaps with another. Please choose a different time slot."
+      );
     }
-  };
+  }
 
+  const dutiesToSave = duty.schedules.map((s) => ({
+    name: duty.name,
+    id: duty.id,
+    year: duty.year,
+    course: duty.course,
+    dutyType: duty.dutyType,
+    day: s.day,
+    time: `${s.startTime} - ${s.endTime}`,
+    room: duty.dutyType === "Attendance Checker" ? "N/A" : s.room || "",
+    status: "Active",
+  }));
+
+  if (isEditing && editIndex !== null) {
+    const updatedDuties = duties.filter((d) => d.id !== duty.id);
+    setDuties([...updatedDuties, ...dutiesToSave]);
+  } else {
+    setDuties((prevDuties) => [...prevDuties, ...dutiesToSave]);
+  }
+
+  return { success: true };
+};
+
+
+  // Scholar ID handler (no backend)
   const handleIdChange = (id) => {
-    console.log("ID changed to:", id);
     setFormData((prev) => ({ ...prev, id }));
     if (id.length === 14 && /^[0-9-]+$/.test(id)) {
-      console.log("Fetching details for ID:", id);
-      fetchScholarDetails(id);
+      setFormData((prev) => ({
+        ...prev,
+        name: "Sample Scholar",
+        year: "3rd Year",
+        course: "BS INFORMATION TECHNOLOGY",
+        dutyType: "Student Facilitator",
+      }));
     } else {
       setFormData((prev) => ({
         ...prev,
@@ -198,43 +136,7 @@ export default function DutyManagement() {
     }
   };
 
-  const fetchScholarDetails = async (scholarId) => {
-    setIsLoading(true);
-    console.log("Fetching scholar details for:", scholarId);
-    try {
-      const response = await axios.get(`http://192.168.86.139:8000/api/scholars/${scholarId}`);
-      console.log("Scholar details response:", JSON.stringify(response.data, null, 2));
-      if (!response.data.exists || !response.data.scholar) {
-        throw new Error("Scholar not found");
-      }
-      const scholar = response.data.scholar;
-      const validDutyTypes = ["Student Facilitator", "Attendance Checker"];
-      const fetchedDutyType = scholar.duty && validDutyTypes.includes(scholar.duty) ? scholar.duty : validDutyTypes[0];
-      const newFormData = {
-        id: scholarId,
-        name: scholar.name || "",
-        year: scholar.year || "",
-        course: scholar.course || "",
-        dutyType: fetchedDutyType,
-        schedules: formData.schedules, // Preserve existing schedules
-      };
-      setFormData(newFormData);
-      console.log("Updated formData with scholar details:", newFormData);
-    } catch (error) {
-      console.error("Fetch scholar details error:", error.response?.status, error.message, error.response?.data);
-      Alert.alert("Error", error.message === "Scholar not found" ? "Scholar not found. Please check the ID." : "Failed to fetch scholar details. Please try again.");
-      setFormData((prev) => ({
-        ...prev,
-        name: "",
-        year: "",
-        course: "",
-        dutyType: "",
-      }));
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
+  // Search filter
   const filteredDuties = duties.filter(
     (d) =>
       d.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -280,7 +182,6 @@ export default function DutyManagement() {
         onEdit={(index) => {
           setEditIndex(index);
           setModalVisible(true);
-          // Load all schedules for the scholar
           const scholarDuties = duties.filter(d => d.id === duties[index].id);
           const schedules = scholarDuties.map(d => ({
             day: d.day,
@@ -296,9 +197,8 @@ export default function DutyManagement() {
         onView={(duty) => setViewDuty(duty)}
         onToggleStatus={(index) => {
           const updated = [...duties];
-          const currentStatus = updated[index].status;
           updated[index].status =
-            currentStatus === "Active" ? "Deactivated" : "Active";
+            updated[index].status === "Active" ? "Deactivated" : "Active";
           setDuties(updated);
         }}
       />

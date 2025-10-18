@@ -1,4 +1,3 @@
-  import AsyncStorage from "@react-native-async-storage/async-storage";
 import React, { useState, useEffect } from "react";
 import {
   View,
@@ -12,8 +11,7 @@ import {
   Modal,
   Alert,
 } from "react-native";
-import Ionicons from "react-native-vector-icons/Ionicons";
-
+import { Ionicons } from "@expo/vector-icons";  // ✅ Add this line
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get("window");
 const isDesktop = screenWidth >= 768;
@@ -32,18 +30,10 @@ const addShadow = (obj = {}) => ({
   ...(Platform.OS === "android" && { elevation: 5 }),
 });
 
-// ========================== LOGIN FORM ==========================
-
-
-const LoginFormContent = ({ navigation }) => {
-  
+const LoginForm = ({ navigation }) => {
   const [username, setUsername] = useState("");
-
-   const [password, setPassword] = useState("");
-
   const [loginPassword, setLoginPassword] = useState("");
   const [showLoginPassword, setShowLoginPassword] = useState(false);
-
   const [error, setError] = useState("");
 
   // Forgot Password Modals
@@ -51,16 +41,13 @@ const LoginFormContent = ({ navigation }) => {
   const [showCodeModal, setShowCodeModal] = useState(false);
   const [showResetModal, setShowResetModal] = useState(false);
   const [emailError, setEmailError] = useState("");
-
   const [email, setEmail] = useState("");
   const [code, setCode] = useState("");
-  const [timer, setTimer] = useState(300);
+  const [timer, setTimer] = useState(60);
   const [passwordNew, setPasswordNew] = useState("");
   const [passwordConfirm, setPasswordConfirm] = useState("");
-
   const [showPasswordNew, setShowPasswordNew] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
-
 
   // Countdown timer for code modal
   useEffect(() => {
@@ -70,197 +57,63 @@ const LoginFormContent = ({ navigation }) => {
     }
     return () => clearInterval(countdown);
   }, [showCodeModal, timer]);
-  //login
-const handleLogin = async () => {
-  if (!username || !loginPassword) {
-    setError("Please enter username and password.");
-    return;
-  }
 
-  // Temporary login (bypass backend)
-  if (username.trim().toLowerCase() === "temporary.au@phinmaed.com" && loginPassword === "Test123@@") {
-    Alert.alert("Login Successful", "Welcome, Admin User!");
-    await AsyncStorage.setItem("token", "temporary-admin-token");
-    await AsyncStorage.setItem("role", "Admin");
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "AdminTabs" }],
-    });
-    return;
-  }
-
-  if (username.trim().toLowerCase() === "temporary.checker.au@phinmaed.com" && loginPassword === "Test123@@") {
-    Alert.alert("Login Successful", "Welcome, Attendance Checker!");
-    await AsyncStorage.setItem("token", "temporary-checker-token");
-    await AsyncStorage.setItem("role", "checker");
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "AttendanceCheckerTabs" }],
-    });
-    return;
-  }
-
-  if (username.trim().toLowerCase() === "student.au@phinmaed.com" && loginPassword === "Test123@@") {
-    Alert.alert("Login Successful", "Welcome, Student Facilitator!");
-    await AsyncStorage.setItem("token", "temporary-student-token");
-    await AsyncStorage.setItem("role", "student");
-    navigation.reset({
-      index: 0,
-      routes: [{ name: "StudentFacilitatorTabs" }],
-    });
-    return;
-  }
-
-  try {
-    const response = await fetch("http://192.168.86.139:8000/api/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password: loginPassword }),
-    });
-
-    const data = await response.json();
-    console.log("Raw backend response:", data);
-    console.log("User role:", data.role);
-
-    if (response.ok && data.role) {
-      await AsyncStorage.setItem("token", data.token);
-      await AsyncStorage.setItem("role", data.role);
-
-      if (data.role === "admin") {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "AdminTabs" }],
-        });
-      } else if (data.role === "checker") {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "AttendanceCheckerTabs" }],
-        });
-      } else if (data.role === "student") {
-        navigation.reset({
-          index: 0,
-          routes: [{ name: "StudentFacilitatorTabs" }],
-        });
-      } else {
-        Alert.alert("Error", "Unknown role");
-      }
-    } else {
-      setError(data.message || "Invalid credentials.");
+  // Temporary login (no backend)
+  const handleLogin = () => {
+    if (!username || !loginPassword) {
+      setError("Please enter username and password.");
+      return;
     }
-  } catch (err) {
-    console.error("Login fetch error:", err);
-    Alert.alert("Error", "Unable to connect to server.");
-  }
-};
 
+    const user = username.trim().toLowerCase();
 
+    if (user === "temporary.au@phinmaed.com" && loginPassword === "Test123@@") {
+      Alert.alert("Login Successful", "Welcome, Admin!");
+      navigation.reset({ index: 0, routes: [{ name: "AdminTabs" }] });
+      return;
+    }
+    if (user === "temporary.checker.au@phinmaed.com" && loginPassword === "Test123@@") {
+      Alert.alert("Login Successful", "Welcome, Attendance Checker!");
+      navigation.reset({ index: 0, routes: [{ name: "AttendanceCheckerTabs" }] });
+      return;
+    }
+    if (user === "student.au@phinmaed.com" && loginPassword === "Test123@@") {
+      Alert.alert("Login Successful", "Welcome, Student Facilitator!");
+      navigation.reset({ index: 0, routes: [{ name: "StudentFacilitatorTabs" }] });
+      return;
+    }
 
-  // Forgot password flow handlers
-  const handleForgotPassword = () => {
-    setShowEmailModal(true);
+    setError("Invalid credentials (no backend connected).");
   };
 
-  const handleContinueEmail = async () => {
-  if (!email) {
-    if (Platform.OS === "web") setEmailError("Please enter your email.");
-    else Alert.alert("Error", "Please enter your email.");
-    return;
-  }
+  // Forgot password (frontend-only simulation)
+  const handleForgotPassword = () => setShowEmailModal(true);
 
-  const emailPattern = /^[a-zA-Z0-9._%+-]+\.au@phinmaed\.com$/i;
-  if (!emailPattern.test(email)) {
-    const msg = "Invalid PHINMAED email format.";
-    if (Platform.OS === "web") setEmailError(msg);
-    else Alert.alert("Error", msg);
-    return;
-  }
+  const handleContinueEmail = () => {
+    if (!email) return setEmailError("Please enter your email.");
+    const pattern = /^[a-zA-Z0-9._%+-]+\.au@phinmaed\.com$/i;
+    if (!pattern.test(email)) return setEmailError("Invalid PHINMAED email format.");
 
-  setEmailError("");
+    setShowEmailModal(false);
+    setShowCodeModal(true);
+    setTimer(60);
+    Alert.alert("Success", "Verification code sent (simulated).");
+  };
 
-  try {
-    const response = await fetch("http://192.168.86.139:8000/api/auth/forgot-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.toLowerCase() }),
-    });
+  const handleVerifyCode = () => {
+    if (code.length !== 4) return Alert.alert("Error", "Please enter a valid 4-digit code.");
+    setShowCodeModal(false);
+    setShowResetModal(true);
+  };
 
-    const data = await response.json();
-
-    if (response.status === 200) {
-      setShowEmailModal(false);
-      setShowCodeModal(true);
-      setTimer(60);
-      Alert.alert("Success", data.message);
-    } else {
-      Alert.alert("Error", data.message);
-    }
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Error", "Unable to connect to server.");
-  }
-};
-
-
-const handleVerifyCode = async () => {
-  if (code.length !== 4) {
-    Alert.alert("Error", "Please enter a valid 4-digit code.");
-    return;
-  }
-
-  try {
-    const response = await fetch("http://192.168.86.139:8000/api/auth/verify-code", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email: email.toLowerCase(), code }),
-    });
-    
-    const data = await response.json();
-
-    if (response.status === 200) {
-      setShowCodeModal(false);
-      setShowResetModal(true);
-    } else {
-      Alert.alert("Error", data.message);
-    }
-  } catch (err) {
-    console.error(err);
-    Alert.alert("Error", "Unable to connect to server.");
-  }
-};
-
-
-  const handleResetPassword = async () => {
-  if (!passwordNew || !passwordConfirm) {
-    Alert.alert("Error", "Please fill in all fields.");
-    return;
-  }
-  if (passwordNew !== passwordConfirm) {
-    Alert.alert("Error", "Passwords do not match.");
-    return;
-  }
-
-  try {
-    const response = await fetch("http://192.168.86.139:8000/api/auth/reset-password", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      // <-- send `newPassword`, because backend expects that name
-      body: JSON.stringify({ email: email.toLowerCase(), newPassword: passwordNew }),
-    });
-
-    const data = await response.json();
-
-    if (response.status === 200) {
-      Alert.alert("Success", "Password successfully reset!");
-      setShowResetModal(false);
-    } else {
-      Alert.alert("Error", data.message || "Reset failed");
-    }
-  } catch (err) {
-    console.error("Reset password fetch error:", err);
-    Alert.alert("Error", "Unable to connect to server.");
-  }
-};
-
+  const handleResetPassword = () => {
+    if (!passwordNew || !passwordConfirm)
+      return Alert.alert("Error", "Please fill in all fields.");
+    if (passwordNew !== passwordConfirm)
+      return Alert.alert("Error", "Passwords do not match.");
+    Alert.alert("Success", "Password successfully reset! (simulated)");
+    setShowResetModal(false);
+  };
   return (
     <View style={styles.formContainer}>
       {/* Username */}
@@ -274,20 +127,27 @@ const handleVerifyCode = async () => {
           autoCapitalize="none"
         />
       </View>
-  {/* Password */}
-      <View style={styles.inputGroup}>
-        <Text style={styles.label}>Password:</Text>
-        <View style={styles.passwordInputContainer}>
-          <TextInput
-            secureTextEntry={!showLoginPassword}
-            style={[styles.input]}
-            value={loginPassword}
-            onChangeText={setLoginPassword}
-            placeholder="Enter Password..."
-          />
-        
-        </View>
-      </View>
+ <View style={styles.passwordInputContainer}>
+  <TextInput
+    secureTextEntry={!showLoginPassword}
+    style={[styles.input, { paddingRight: 40 }]}
+    value={loginPassword}
+    onChangeText={setLoginPassword}
+    placeholder="Enter Password..."
+  />
+  <TouchableOpacity
+    style={styles.passwordeyeIcon}
+    onPress={() => setShowLoginPassword(!showLoginPassword)}
+  >
+    <Ionicons
+      name={showLoginPassword ? "eye-off-outline" : "eye-outline"}
+      size={20}
+      color={showLoginPassword ? "#60a5fa" : "#6b7280"}
+    />
+  </TouchableOpacity>
+</View>
+
+
 
       {/* Forgot Password */}
       <TouchableOpacity
@@ -352,15 +212,20 @@ const handleVerifyCode = async () => {
       <Text style={styles.modalDesc}>
         We’ve sent a 4-digit code to your email. Enter it below to verify your identity.
       </Text>
-      <TextInput
-        style={styles.modalInput}
-        placeholder="Enter 4-digit code"
-        placeholderTextColor="#9ca3af" 
-        value={code}
-        onChangeText={setCode}
-        keyboardType="number-pad"
-        maxLength={4}
-      />
+    <TextInput
+  style={styles.modalInput}
+  placeholder="Enter 4-digit code"
+  placeholderTextColor="#9ca3af"
+  value={code}
+  onChangeText={(text) => {
+    // Allow only numeric values
+    const numericText = text.replace(/[^0-9]/g, "");
+    setCode(numericText);
+  }}
+  keyboardType="number-pad"
+  maxLength={4}
+/>
+
       <Text style={styles.timerText}>
         {timer > 0 ? `Resend available in ${timer}s` : "Didn't receive code?"}
       </Text>
@@ -437,8 +302,7 @@ const handleVerifyCode = async () => {
           </View>
         );
       })()}
-
-    {/* New Password Input */}
+{/* New Password Input */}
 <View style={styles.passwordInputContainer}>
   <TextInput
     style={[styles.modalInput, { paddingRight: 40 }]} // add padding for icon
@@ -449,13 +313,13 @@ const handleVerifyCode = async () => {
     onChangeText={setPasswordNew}
   />
   <TouchableOpacity
-    style={styles.eyeIconInside}
+    style={styles.passwordeyeIcon}
     onPress={() => setShowPasswordNew(!showPasswordNew)}
   >
     <Ionicons
       name={showPasswordNew ? "eye-off-outline" : "eye-outline"}
       size={20}
-      color="#6b7280"
+      color={showPasswordNew ? "#60a5fa" : "#6b7280"}
     />
   </TouchableOpacity>
 </View>
@@ -471,16 +335,17 @@ const handleVerifyCode = async () => {
     onChangeText={setPasswordConfirm}
   />
   <TouchableOpacity
-    style={styles.eyeIconInside}
+    style={styles.passwordeyeIcon}
     onPress={() => setShowPasswordConfirm(!showPasswordConfirm)}
   >
     <Ionicons
       name={showPasswordConfirm ? "eye-off-outline" : "eye-outline"}
       size={20}
-      color="#6b7280"
+      color={showPasswordConfirm ? "#60a5fa" : "#6b7280"}
     />
   </TouchableOpacity>
 </View>
+
 
       {/* Password Match Indicator */}
       {passwordConfirm.length > 0 && (
@@ -573,7 +438,7 @@ const LoginScreen = ({ navigation }) => {
           <View style={styles.desktopFormPanel}>
             <View style={{ width: "100%", maxWidth: 320, alignSelf: "center" }}>
               <LogoSection size={96} />
-              <LoginFormContent navigation={navigation} />
+              <LoginForm navigation={navigation} />
             </View>
           </View>
         </View>
@@ -584,7 +449,7 @@ const LoginScreen = ({ navigation }) => {
           </View>
           <View style={styles.mobileFormContainer}>
             <LogoSection size={48} />
-            <LoginFormContent navigation={navigation} />
+            <LoginForm navigation={navigation} />
           </View>
         </View>
       )}
@@ -636,7 +501,6 @@ const styles = StyleSheet.create({
   mobileImageContainer: { width: "100%", height: 256, borderRadius: 12, overflow: "hidden", ...addShadow() },
   mobileFormContainer: { width: "88%", backgroundColor: "white", marginTop: -96, zIndex: 10, padding: isTablet ? 32 : 24, borderRadius: 12, alignSelf: "center", ...addShadow({ shadowOpacity: 0.25, elevation: 12 }) },
   passwordInputContainer: { width: "100%", position: "relative", marginBottom: 10 },
-  eyeIcon: { position: "absolute", right: 12, top: Platform.OS === "web" ? 14 : 12 },
   modalContainer: {
     flex: 1,
     justifyContent: "center",
@@ -747,6 +611,13 @@ const styles = StyleSheet.create({
     textAlign: "center",
     marginBottom: 6,
   },
+  passwordeyeIcon: {
+  position: "absolute",
+  right: 12,
+  top: Platform.OS === "web" ? 14 : 12,
+},
+
+
 });
 
 export default LoginScreen;

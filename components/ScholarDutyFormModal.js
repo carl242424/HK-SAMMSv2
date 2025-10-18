@@ -34,6 +34,7 @@ const ScholarDutyFormModal = ({
   const [dutyType, setDutyType] = useState(null);
   const [schedules, setSchedules] = useState([{ day: "", startTime: "", endTime: "", room: "" }]);
   const [successModalVisible, setSuccessModalVisible] = useState(false);
+  const [scheduleErrors, setScheduleErrors] = useState([]);
 
   useEffect(() => {
     console.log("useEffect triggered with initialData:", initialData);
@@ -63,9 +64,14 @@ const ScholarDutyFormModal = ({
   };
 
   const handleDutyTypeChange = (item) => {
-    console.log("Duty type changed to:", item.value);
-    setDutyType(item.value);
-  };
+  console.log("Duty type changed to:", item.value);
+  setDutyType(item.value);
+
+  if (item.value === "Student Facilitator" || item.value === "Attendance Checker") {
+    Alert.alert("Duty Information", `${item.value} requires 70 hours.`);
+  }
+};
+
 
   const isEditing = !!initialData?.id;
 
@@ -117,103 +123,134 @@ const ScholarDutyFormModal = ({
 
 
   const updateSchedule = (index, field, value) => {
-    console.log(`Updating schedule ${index + 1}, field: ${field}, value: ${value}`);
-    const updated = [...schedules];
-    updated[index][field] = value;
-    // Check for overlaps when updating day, startTime, or endTime
-    if (field === "day" || field === "startTime" || field === "endTime") {
-      const currentSchedule = updated[index];
-      if (currentSchedule.day && currentSchedule.startTime && currentSchedule.endTime) {
-        console.log("Checking for in-modal overlaps with:", currentSchedule);
-        const hasOverlap = updated.some((sched, i) => {
-          if (i === index) {
-            console.log("Skipping same schedule index:", i);
-            return false;
-          }
-          if (!sched.day || !sched.startTime || !sched.endTime) {
-            console.log("Skipping incomplete schedule:", sched);
-            return false;
-          }
-          const overlap = doTimeRangesOverlap(
-            currentSchedule.day,
-            currentSchedule.startTime,
-            currentSchedule.endTime,
-            sched.day,
-            sched.startTime,
-            sched.endTime
-          );
-          if (overlap) {
-            console.log(`Overlap detected with schedule ${i + 1}:`, sched);
-          }
-          return overlap;
-        });
-        if (hasOverlap) {
-          console.log("Showing overlap alert and resetting field");
-          Alert.alert("Schedule Conflict", "The selected schedule overlaps with another. Please choose a different time slot.");
-          updated[index][field] = ""; // Reset the field to prevent overlap
-        }
-      } else {
-        console.log("Schedule incomplete, skipping overlap check:", currentSchedule);
-      }
-    }
+  console.log(`Updating schedule ${index + 1}, field: ${field}, value: ${value}`);
+  const updated = [...schedules];
+  const errors = [...scheduleErrors];
+
+  updated[index][field] = value;
+  errors[index] = ""; // reset old error for this schedule
+
+  // Skip overlap validation for Student Facilitator or Attendance Checker
+  if (dutyType === "Student Facilitator" || dutyType === "Attendance Checker") {
     setSchedules(updated);
-  };
+    setScheduleErrors(errors);
+    return;
+  }
 
-  const handleSave = async () => {
-    console.log("handleSave called with schedules:", schedules);
-    if (!isFormComplete) {
-      console.log("Form incomplete, showing alert");
-      return Alert.alert("Missing Info", "Please fill in all fields.");
+  // Check for overlaps only when day, startTime, or endTime is changed
+  if (field === "day" || field === "startTime" || field === "endTime") {
+    const currentSchedule = updated[index];
+    if (currentSchedule.day && currentSchedule.startTime && currentSchedule.endTime) {
+      console.log("Checking overlaps with:", currentSchedule);
+      const hasOverlap = updated.some((sched, i) => {
+        if (i === index) return false;
+        if (!sched.day || !sched.startTime || !sched.endTime) return false;
+        return doTimeRangesOverlap(
+          currentSchedule.day,
+          currentSchedule.startTime,
+          currentSchedule.endTime,
+          sched.day,
+          sched.startTime,
+          sched.endTime
+        );
+      });
+
+      if (hasOverlap) {
+        console.log("Overlap detected!");
+        errors[index] = "⚠️ This schedule overlaps with another. Please select a different time.";
+      }
+    }
+  }
+
+  setSchedules(updated);
+  setScheduleErrors(errors);
+};
+
+ const handleSave = async () => {
+  console.log("handleSave called with schedules:", schedules);
+
+  if (!isFormComplete) {
+    return Alert.alert("Missing Info", "Please fill in all fields.");
+  }
+
+  // Prevent saving if any inline overlap errors exist
+  if (scheduleErrors.some((e) => e && e.length > 0)) {
+    return Alert.alert(
+      "Schedule Conflict",
+      "Please fix the overlapping schedules before saving."
+    );
+  }
+
+  // ✅ NEW: Prevent same day, same time, same room duplicates
+  if (dutyType === "Student Facilitator" || dutyType === "Attendance Checker") {
+    for (let i = 0; i < schedules.length; i++) {
+      for (let j = i + 1; j < schedules.length; j++) {
+        const s1 = schedules[i];
+        const s2 = schedules[j];
+
+        const sameDay = s1.day === s2.day;
+        const sameStart = s1.startTime === s2.startTime;
+        const sameEnd = s1.endTime === s2.endTime;
+
+        // Attendance Checker has no room field
+        const sameRoom =
+          dutyType === "Attendance Checker" ? true : s1.room === s2.room;
+
+        if (sameDay && sameStart && sameEnd && sameRoom) {
+          return Alert.alert(
+            "Duplicate Schedule",
+            "Same day, same time, and same room is not allowed. Please select a different schedule."
+          );
+        }
+      }
+    }
+  }
+
+  // Validate time ranges
+  for (let s of schedules) {
+    const startIndex = TIMES.indexOf(s.startTime);
+    const endIndex = TIMES.indexOf(s.endTime);
+
+    if (startIndex === -1 || endIndex === -1) {
+      return Alert.alert("Invalid Selection", "Please select valid start and end times.");
     }
 
-    for (let s of schedules) {
-      const startIndex = TIMES.indexOf(s.startTime);
-      const endIndex = TIMES.indexOf(s.endTime);
-
-      if (startIndex === -1 || endIndex === -1) {
-        console.log("Invalid time selection:", s);
-        return Alert.alert("Invalid Selection", "Please select valid start and end times.");
-      }
-
-      if (startIndex >= endIndex) {
-        console.log("Invalid time range:", s);
-        return Alert.alert("Invalid Time", "End time must be later than Start time.");
-      }
-
-      if (endIndex - startIndex < 2) {
-        console.log("Duty duration too short:", s);
-        return Alert.alert("Invalid Duty Duration", "1hr or above allowed duty hours.");
-      }
+    if (startIndex >= endIndex) {
+      return Alert.alert("Invalid Time", "End time must be later than Start time.");
     }
 
-    try {
-      console.log("Calling onSave with duty data");
-      await onSave({
+    if (endIndex - startIndex < 2) {
+      return Alert.alert("Invalid Duty Duration", "1 hour or above allowed duty hours.");
+    }
+  }
+
+  // Set total hours for selected duty types
+  let totalHours = null;
+  if (dutyType === "Student Facilitator" || dutyType === "Attendance Checker") {
+    totalHours = 70;
+  }
+
+  try {
+    await onSave(
+      {
         name: studentName,
         id: studentId,
         year,
         course,
         dutyType,
         schedules,
+        totalHours,
         status: "Active",
-      }, isEditing);
-      console.log("onSave completed successfully");
-      onClose();
-      setSuccessModalVisible(true);
-    } catch (error) {
-      console.error("Save error caught in handleSave:", error.message);
-      if (error.message === "Unknown account. Please register first.") {
-        console.log("Showing account error alert");
-        Alert.alert("Account Error", "Unknown account. Please register first.");
-      } else if (error.message === "The selected schedule overlaps with another. Please choose a different time slot.") {
-        console.log("Showing database overlap alert");
-        Alert.alert("Schedule Conflict", error.message);
-      } else {
-        console.log("Showing generic save error alert");
-        Alert.alert("Save Error", `Failed to save duty: ${error.message || "Please check the data."}`);
-      }
-    }
-  };
+      },
+      isEditing
+    );
+    onClose();
+    setSuccessModalVisible(true);
+  } catch (error) {
+    console.error("Save failed:", error);
+    Alert.alert("Save Error", "Failed to save duty. Please try again.");
+  }
+};
 
   const closeSuccessModal = () => {
     setSuccessModalVisible(false);
@@ -350,7 +387,10 @@ const ScholarDutyFormModal = ({
                       onChange={(item) => updateSchedule(index, "endTime", item.value)}
                     />
                   </View>
-
+                   {scheduleErrors[index] ? (
+  <Text style={styles.errorText}>{scheduleErrors[index]}</Text>
+) : null}
+ 
                   {dutyType !== "Attendance Checker" && (
                     <Dropdown
                       style={styles.dropdown}
@@ -511,6 +551,12 @@ scheduleHeader: {
   justifyContent: "space-between",
   alignItems: "center",
   marginBottom: 8,
+},
+errorText: {
+  color: "red",
+  fontSize: 12,
+  marginTop: 4,
+  fontWeight: "500",
 },
 
 });

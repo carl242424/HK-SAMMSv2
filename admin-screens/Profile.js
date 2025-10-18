@@ -4,16 +4,14 @@ import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 const PRIMARY_COLOR = "#00A4DF";
 
 export default function Profile() {
-  // Example data (replace with real logged-in admin data)
   const adminData = {
     name: "John Doe",
     id: "EMP001",
     status: "Active",
-    password: "********", // don’t show real password
+    password: "********",
   };
 
   const handleLogout = () => {
-    // You can replace this with real logout logic
     console.log("Logged out");
   };
 
@@ -30,7 +28,12 @@ export default function Profile() {
         <Text style={styles.value}>{adminData.id}</Text>
 
         <Text style={styles.label}>Status:</Text>
-        <Text style={[styles.value, adminData.status === "Active" ? styles.active : styles.inactive]}>
+        <Text
+          style={[
+            styles.value,
+            adminData.status === "Active" ? styles.active : styles.inactive,
+          ]}
+        >
           {adminData.status}
         </Text>
 
@@ -48,7 +51,12 @@ export default function Profile() {
 
 const styles = StyleSheet.create({
   container: { flex: 1, padding: 20, backgroundColor: "#fff" },
-  title: { fontSize: 22, fontWeight: "bold", marginBottom: 20, textAlign: "center" },
+  title: {
+    fontSize: 22,
+    fontWeight: "bold",
+    marginBottom: 20,
+    textAlign: "center",
+  },
 
   profileCard: {
     backgroundColor: "#f9f9f9",
@@ -69,10 +77,16 @@ const styles = StyleSheet.create({
   inactive: { color: "red" },
 
   logoutBtn: {
-    backgroundColor: "#e0e0e0", // light-colored button
-    padding: 12,
-    borderRadius: 6,
-    alignItems: "center",
-  },
-  logoutText: { color: "#333", fontWeight: "600" },
+  backgroundColor: "#e0e0e0",
+  paddingVertical: 4,  // reduced from 8
+  paddingHorizontal: 12, // reduced from 20
+  borderRadius: 16,      // slightly smaller radius
+  alignSelf: "center",
+},
+logoutText: {
+  color: "#333",
+  fontWeight: "600",
+  fontSize: 12, // reduced from 14
+},
+
 });

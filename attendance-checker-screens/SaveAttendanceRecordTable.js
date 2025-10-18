@@ -1,10 +1,35 @@
 import React, { useState } from "react";
 import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
-const SaveAttendanceRecordTable = ({ records }) => {
-  const [currentPage, setCurrentPage] = useState(1);
-  const recordsPerPage = 5; // ✅ change this number to control how many rows per page
+const SaveAttendanceRecordTable = () => {
+  // 🧾 Sample local data (for display only, not from backend)
+  const [records, setRecords] = useState([
+    {
+      studentName: "John Doe",
+      studentId: "01-2324-030012",
+      yearLevel: "3rd Year",
+      course: "BSIT",
+      dutyType: "Library",
+      room: "Room 101",
+      classStatus: "Present",
+      facilitatorStatus: "Checked",
+      encodedTime: "2025-10-19 09:00 AM",
+    },
+    {
+      studentName: "Jane Smith",
+      studentId: "01-2324-030045",
+      yearLevel: "2nd Year",
+      course: "BSEd",
+      dutyType: "Office",
+      room: "Admin 102",
+      classStatus: "Absent",
+      facilitatorStatus: "Pending",
+      encodedTime: "2025-10-19 09:05 AM",
+    },
+  ]);
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const recordsPerPage = 5;
   const totalPages = Math.ceil(records.length / recordsPerPage);
   const startIndex = (currentPage - 1) * recordsPerPage;
   const currentRecords = records.slice(startIndex, startIndex + recordsPerPage);
@@ -30,7 +55,9 @@ const SaveAttendanceRecordTable = ({ records }) => {
         <Text style={[styles.tableCell, styles.cellHeader]}>Duty Type</Text>
         <Text style={[styles.tableCell, styles.cellHeader]}>Room</Text>
         <Text style={[styles.tableCell, styles.cellHeader]}>Class Status</Text>
-        <Text style={[styles.tableCell, styles.cellHeader]}>Facilitator Status</Text>
+        <Text style={[styles.tableCell, styles.cellHeader]}>
+          Facilitator Status
+        </Text>
         <Text style={[styles.tableCell, styles.cellHeader]}>Encoded Time</Text>
       </View>
 
@@ -53,7 +80,7 @@ const SaveAttendanceRecordTable = ({ records }) => {
         ))
       )}
 
-      {/* ✅ Pagination Controls */}
+      {/* Pagination */}
       {records.length > recordsPerPage && (
         <View style={styles.paginationContainer}>
           <TouchableOpacity
@@ -69,7 +96,10 @@ const SaveAttendanceRecordTable = ({ records }) => {
           </Text>
 
           <TouchableOpacity
-            style={[styles.pageButton, currentPage === totalPages && styles.disabledButton]}
+            style={[
+              styles.pageButton,
+              currentPage === totalPages && styles.disabledButton,
+            ]}
             onPress={handleNextPage}
             disabled={currentPage === totalPages}
           >
@@ -125,8 +155,6 @@ const styles = StyleSheet.create({
     paddingVertical: 10,
     fontStyle: "italic",
   },
-
-  // ✅ Pagination Styles
   paginationContainer: {
     flexDirection: "row",
     justifyContent: "center",

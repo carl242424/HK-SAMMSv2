@@ -11,63 +11,30 @@ import {
 const QRCheckIn = ({ scannedData }) => {
   const [records, setRecords] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
-  const API_URL = "http://192.168.86.139:8000/api/checkerAttendance";
 
-  // Fetch attendance records from API on mount
-  useEffect(() => {
-    const fetchRecords = async () => {
-      try {
-        const response = await fetch(API_URL);
-        console.log('Response status:', response.status); // Keep status log
-        if (!response.ok) {
-          throw new Error(`HTTP error! status: ${response.status}`);
-        }
-        const data = await response.json(); // Use json() directly
-        setRecords(data);
-      } catch (error) {
-        console.error("Error fetching records:", error);
-      }
-    };
-    fetchRecords();
-  }, []);
-
-  // Auto-add scanned QR data when received
+  // Simulate adding a new record when scannedData changes
   useEffect(() => {
     if (scannedData) {
       const newRecord = {
-        studentId: scannedData.studentId || `NO-ID-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+        studentId:
+          scannedData.studentId ||
+          `NO-ID-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
         studentName: scannedData.studentName || "N/A",
-        checkerId: "FAC001", // Example checker ID (replace with dynamic value if needed)
-        checkerName: "John Facilitator", // Example checker name (replace with dynamic value if needed)
+        checkerId: "FAC001", // Example checker ID
+        checkerName: "John Facilitator", // Example checker name
         checkInTime: new Date(),
         location: scannedData.location || "Room 101",
         status: "Pending",
       };
 
-      const postRecord = async () => {
-        try {
-          const response = await fetch(API_URL, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(newRecord),
-          });
-          if (!response.ok) {
-            throw new Error(`HTTP error! status: ${response.status}`);
-          }
-          const result = await response.json();
-          setRecords((prev) => {
-            const exists = prev.some((r) => r.studentId === newRecord.studentId);
-            return exists ? prev : [newRecord, ...prev];
-          });
-        } catch (error) {
-          console.error("Error posting record:", error);
-        }
-      };
-      postRecord();
+      setRecords((prev) => {
+        const exists = prev.some((r) => r.studentId === newRecord.studentId);
+        return exists ? prev : [newRecord, ...prev];
+      });
     }
   }, [scannedData]);
 
-  // Filter records by search input with defensive checks
+  // Filter records by search
   const filteredRecords = records.filter((r) => {
     const studentName = r.studentName || "";
     const studentId = r.studentId || "";
@@ -115,7 +82,9 @@ const QRCheckIn = ({ scannedData }) => {
               <Text style={styles.cell}>{r.studentName}</Text>
               <Text style={styles.cell}>{r.dutyType || "N/A"}</Text>
               <Text style={styles.cell}>{r.status}</Text>
-              <Text style={styles.cell}>{new Date(r.checkInTime).toLocaleString()}</Text>
+              <Text style={styles.cell}>
+                {new Date(r.checkInTime).toLocaleString()}
+              </Text>
             </View>
           ))
         ) : (

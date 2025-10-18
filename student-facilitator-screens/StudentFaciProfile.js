@@ -1,5 +1,5 @@
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
+import React from "react";
+import { View, Text, StyleSheet, TouchableOpacity } from "react-native";
 
 const StudentFaciProfile = () => {
   return (
@@ -7,25 +7,35 @@ const StudentFaciProfile = () => {
       <Text style={styles.header}>Student Facilitator Profile</Text>
 
       <View style={styles.infoBox}>
-        <Text style={styles.label}>Student Name:</Text>
-        <Text style={styles.value}>John Doe</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Student Name:</Text>
+          <Text style={styles.value}>John Doe</Text>
+        </View>
 
-        <Text style={styles.label}>Student ID:</Text>
-        <Text style={styles.value}>2025-001</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Student ID:</Text>
+          <Text style={styles.value}>2025-001</Text>
+        </View>
 
-        <Text style={styles.label}>Year:</Text>
-        <Text style={styles.value}>3rd Year</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Year:</Text>
+          <Text style={styles.value}>3rd Year</Text>
+        </View>
 
-        <Text style={styles.label}>Course:</Text>
-        <Text style={styles.value}>BS Information Technology</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Course:</Text>
+          <Text style={styles.value}>BS Information Technology</Text>
+        </View>
 
-        <Text style={styles.label}>Duty Type:</Text>
-        <Text style={styles.value}>Student Facilitator</Text>
+        <View style={styles.row}>
+          <Text style={styles.label}>Duty Type:</Text>
+          <Text style={styles.value}>Student Facilitator</Text>
+        </View>
+
+        <TouchableOpacity style={styles.logoutButton}>
+          <Text style={styles.logoutText}>Logout</Text>
+        </TouchableOpacity>
       </View>
-
-      <TouchableOpacity style={styles.logoutButton}>
-        <Text style={styles.logoutText}>Logout</Text>
-      </TouchableOpacity>
     </View>
   );
 };
@@ -33,42 +43,55 @@ const StudentFaciProfile = () => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    backgroundColor: "#f5f6fa",
+    alignItems: "center",
+    justifyContent: "center",
     padding: 20,
-    backgroundColor: '#f8f9fa',
   },
   header: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1e1e1e',
-    marginBottom: 20,
+    fontSize: 18,
+    fontWeight: "600",
+    color: "#333",
+    marginBottom: 15,
   },
   infoBox: {
-    backgroundColor: '#fff',
-    borderRadius: 12,
-    padding: 15,
-    elevation: 2,
-    marginBottom: 30,
+    backgroundColor: "#fff",
+    width: "100%",
+    maxWidth: 400, // ✅ keeps it compact on web
+    borderRadius: 10,
+    padding: 16,
+    boxShadow: "0 2px 6px rgba(0,0,0,0.1)",
+  },
+  row: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    marginVertical: 6,
   },
   label: {
-    fontSize: 16,
-    color: '#555',
-    marginTop: 10,
+    fontSize: 14,
+    color: "#666",
+    fontWeight: "500",
   },
   value: {
-    fontSize: 17,
-    fontWeight: '600',
-    color: '#000',
+    fontSize: 14,
+    color: "#222",
+    fontWeight: "600",
+    textAlign: "right",
+    flexShrink: 1,
   },
   logoutButton: {
-    backgroundColor: '#d9534f',
-    paddingVertical: 12,
-    borderRadius: 8,
-    alignItems: 'center',
+    alignSelf: "flex-end",
+    backgroundColor: "#ffe6e6",
+    paddingVertical: 6,
+    paddingHorizontal: 18,
+    borderRadius: 6,
+    marginTop: 15,
+    transition: "background-color 0.2s ease",
   },
   logoutText: {
-    color: '#fff',
-    fontSize: 18,
-    fontWeight: 'bold',
+    color: "#a60000",
+    fontWeight: "600",
+    fontSize: 13,
   },
 });
 
